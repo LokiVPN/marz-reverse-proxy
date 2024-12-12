@@ -749,6 +749,8 @@ stream_conf() {
 map \$ssl_preread_server_name \$backend {
     ${DOMAIN}                   web;
     www.${DOMAIN}               xtls;
+    ss.${DOMAIN}                web;
+    www.ss.${DOMAIN}            xtls;
 #    ${REALITY}                  reality;
     default                     block;
 }
@@ -763,6 +765,9 @@ upstream web {
 #}
 upstream xtls {
     server 127.0.0.1:9443;
+}
+upstream shadowsocks {
+    server 127.0.0.1:1080;
 }
 server {
     listen 443                  reuseport;
@@ -790,7 +795,7 @@ server {
 server {
     listen                      36077 ssl proxy_protocol;
     http2                       on;
-    server_name                 ${DOMAIN} www.${DOMAIN};
+    server_name                 ${DOMAIN} www.${DOMAIN} ss.${DOMAIN} www.ss.${DOMAIN};
 
     # SSL
     ssl_certificate             ${WEBCERTFILE};
@@ -881,7 +886,7 @@ EOF
 
 # Выбор рандомного сайта для маскировки
 random_site() {
-    bash <(curl -Ls https://github.com/cortez24rus/marz-reverse-proxy/raw/refs/heads/main/marz-rp-random-site.sh)
+    bash <(curl -Ls https://github.com/LokiVPN/marz-reverse-proxy/raw/refs/heads/main/marz-rp-random-site.sh)
 }
 
 # Генерация ключей
@@ -907,10 +912,10 @@ EOF
 update_hosts() {
     sqlite3 "$DB_PATH" <<EOF
 EOF
-    for ID in {1..7}; do
+    for ID in {1..8}; do
         case $ID in
             1)
-                REMARK="🚀 GRPC {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
+                REMARK="GRPC {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
                 ADDRESS="${DOMAIN}"
                 PORT="443"
                 SNI=""
@@ -919,7 +924,7 @@ EOF
                 FINGERPRINT="random"
                 ;;
             2)
-                REMARK="🚀 SPLIT {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
+                REMARK="SPLIT {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
                 ADDRESS="${DOMAIN}"
                 PORT="443"
                 SNI="${DOMAIN}"
@@ -928,7 +933,7 @@ EOF
                 FINGERPRINT="random"
                 ;;
             3)
-                REMARK="🚀 HTTPU {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
+                REMARK="HTTPU {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
                 ADDRESS="${DOMAIN}"
                 PORT="443"
                 SNI=""
@@ -937,7 +942,7 @@ EOF
                 FINGERPRINT="random"
                 ;;
             4)
-                REMARK="🚀 WS {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
+                REMARK="WS {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
                 ADDRESS="${DOMAIN}"
                 PORT="443"
                 SNI="${DOMAIN}"
@@ -946,7 +951,7 @@ EOF
                 FINGERPRINT="random"
                 ;;
             5)
-                REMARK="🚀 STEAL {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
+                REMARK="STEAL {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
                 ADDRESS="www.${DOMAIN}"
                 PORT="443"
                 SNI=""
@@ -955,7 +960,7 @@ EOF
                 FINGERPRINT="random"
                 ;;
             6)
-                REMARK="🚀 REALITY {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
+                REMARK="REALITY {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
                 ADDRESS="www.${DOMAIN}"
                 PORT="443"
                 SNI=""
@@ -964,7 +969,7 @@ EOF
                 FINGERPRINT="random"
                 ;;
             7)
-                REMARK="🚀 XTLS {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
+                REMARK="XTLS {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
                 ADDRESS="www.${DOMAIN}"
                 PORT="443"
                 SNI="www.${DOMAIN}"
@@ -972,55 +977,20 @@ EOF
                 SECURITY="tls"
                 FINGERPRINT="random"
                 ;;
+            8)
+                REMARK="SHADOWSOCKS {TIME_LEFT} {DATA_LEFT} {STATUS_EMOJI}"
+                ADDRESS="ss.${DOMAIN}"
+                PORT="443"
+                SNI=""
+                HOST=""
+                SECURITY="inbound_default"
+                FINGERPRINT="random"
+                ;;
         esac
         sqlite3 "$DB_PATH" <<EOF
 UPDATE hosts SET remark = '$REMARK', address = '$ADDRESS', port = $PORT, sni = '$SNI', host = '$HOST', fingerprint = '$FINGERPRINT', security = '$SECURITY' WHERE id = $ID;
 EOF
     done
-}
-
-marz_bot_install() {    
-    # IP_LIMIT
-    while ! wget -q --progress=dot:mega --timeout=30 --tries=10 --retry-connrefused https://raw.githubusercontent.com/cortez24rus/marz-reverse-proxy/refs/heads/main/config/iplimit_config.json; do
-        warning " $(text 38) "
-        sleep 3
-    done
-
-    jq \
-        --arg bot_token "$BOT_TOKEN_BAN_LIMIT_OR_TORRENT" \
-        --arg admin "$ADMIN_ID" \
-        --arg domain "$DOMAIN:443" \
-        --arg username "$USERNAME" \
-        --arg password "$PASSWORD" \
-        '.BOT_TOKEN = $bot_token |
-         .ADMINS = [$admin] |
-         .PANEL_DOMAIN = $domain |
-         .PANEL_USERNAME = $username |
-         .PANEL_PASSWORD = $password' \
-        iplimit_config.json > config.json
-
-    rm -rf iplimit_config.*
-    echo -e "1\n2\n1\n7" | bash <(curl -sSL https://houshmand-2005.github.io/v2iplimit.sh)
-
-    #TORRENT_BAN
-    mkdir -p /var/lib/marzban/log/
-    echo -e '\n\n' | bash <(curl -fsSL git.new/install)
-
-    sed -i \
-        -e "s|^#\?\s*AdminChatID:.*$|AdminChatID: \"${ADMIN_ID}\"|" \
-        -e "s|^#\?\s*AdminBotToken:.*$|AdminBotToken: \"${BOT_TOKEN_BAN_LIMIT_OR_TORRENT}\"|" \
-        -e "s|^#\?\s*LogFile:.*$|LogFile: \"/var/lib/marzban/log/access.log\"|" \
-        -e "s|^#\?\s*BlockDuration:.*$|BlockDuration: 1|" \
-        /opt/torrent-blocker/config.yaml
-
-    if [[ "$BOT_CHOISE" == "2" ]]; then
-        jq '(.log) = {
-          "access": "/var/lib/marzban/log/access.log",
-          "error": "/var/lib/marzban/log/error.log",
-          "loglevel": "error",
-          "dnsLog": false
-        }' xray_config.json > tmp.json && mv tmp.json xray_config.json
-    fi
 }
 
 ### Установка Marzban ###
@@ -1055,13 +1025,11 @@ EOF
         -e "s|^#\?\s*TELEGRAM_DEFAULT_VLESS_FLOW.*$|TELEGRAM_DEFAULT_VLESS_FLOW = \"xtls-rprx-vision\"|" \
         -e "s|^#\?\s*CUSTOM_TEMPLATES_DIRECTORY.*$|CUSTOM_TEMPLATES_DIRECTORY = \"/var/lib/marzban/templates/\"|" \
         -e "s|^#\?\s*SUBSCRIPTION_PAGE_TEMPLATE.*$|SUBSCRIPTION_PAGE_TEMPLATE = \"subscription/index.html\"|" \
-        -e "s|^#\?\s*TELEGRAM_API_TOKEN.*$|TELEGRAM_API_TOKEN = \"${BOT_TOKEN_PANEL}\"|" \
-        -e "s|^#\?\s*TELEGRAM_ADMIN_ID.*$|TELEGRAM_ADMIN_ID = \"${ADMIN_ID}\"|" \
         -e "s|^#\?\s*LOGIN_NOTIFY_WHITE_LIST.*$|LOGIN_NOTIFY_WHITE_LIST = \'127.0.0.1\'|" \
         /opt/marzban/.env
 
     # Скачивание и распаковка xray конфига
-    while ! wget -q --progress=dot:mega --timeout=30 --tries=10 --retry-connrefused https://raw.githubusercontent.com/cortez24rus/marz-reverse-proxy/refs/heads/main/config/xray_config.json; do
+    while ! wget -q --progress=dot:mega --timeout=30 --tries=10 --retry-connrefused https://raw.githubusercontent.com/LokiVPN/marz-reverse-proxy/refs/heads/main/config/xray_config.json; do
         warning " $(text 38) "
         sleep 3
     done
@@ -1073,15 +1041,13 @@ EOF
         -e "s|TEMP_PRIVATEKEY1|$PRIVATE_KEY1|g" \
         xray_config.json
 
-    marz_bot_install
-
     rm -rf /var/lib/marzban/xray_config.json.*
     mv /var/lib/marzban/xray_config.json /var/lib/marzban/xray_config.json.back
     mv xray_config.json /var/lib/marzban/xray_config.json
     rm -rf xray_config*
 
     # Скачивание базы данных
-    while ! wget -q --progress=dot:mega --timeout=30 --tries=10 --retry-connrefused https://raw.githubusercontent.com/cortez24rus/marz-reverse-proxy/refs/heads/main/database/db.sqlite3; do
+    while ! wget -q --progress=dot:mega --timeout=30 --tries=10 --retry-connrefused https://raw.githubusercontent.com/LokiVPN/marz-reverse-proxy/refs/heads/main/database/db.sqlite3; do
         warning " $(text 38) "
         sleep 3
     done
@@ -1093,8 +1059,6 @@ EOF
     update_admins_proxies
     update_hosts
 
-    # Настройка дизайна подписки
-    sudo wget -N -P /var/lib/marzban/templates/subscription/ https://raw.githubusercontent.com/cortez24rus/marz-sub/refs/heads/main/index.html
     systemctl stop torrent-blocker
     systemctl start torrent-blocker
     timeout 5 marzban up
@@ -1111,92 +1075,6 @@ enabling_security() {
     ufw insert 1 deny from $(echo ${IP4} | cut -d '.' -f 1-3).0/22
     ufw --force enable
     tilda "$(text 10)"
-}
-
-### SSH ####
-ssh_setup() {
-    exec > /dev/tty 2>&1
-    info " $(text 48) "
-    out_data " $(text 49) "
-    echo
-    out_data " $(text 50) "
-    out_data " $(text 51) "
-    echo
-    out_data " $(text 52)" "type \$env:USERPROFILE\.ssh\id_rsa.pub | ssh -p 22 ${USERNAME}@${IP4} \"cat >> ~/.ssh/authorized_keys\""
-    out_data " $(text 53)" "ssh-copy-id -p 22 ${USERNAME}@${IP4}"
-    echo
-    while read -r -t 0.1 -n 1; do :; done
-    reading " $(text 54) " ANSWER_SSH
-    if [[ "${ANSWER_SSH}" == [yY] ]]; then
-        # Цикл проверки наличия ключа
-        while true; do
-            if [[ -n $(grep -v '^[[:space:]]*$' "/home/${USERNAME}/.ssh/authorized_keys") || -n $(grep -v '^[[:space:]]*$' "/root/.ssh/authorized_keys") ]]; then
-                info " $(text 56) "
-                break
-            else
-                warning " $(text 55) "
-                echo
-                reading " $(text 54) " CONTINUE_SSH
-                if [[ "${CONTINUE_SSH}" != [yY] ]]; then
-                    warning " $(text 9) " # Настройка отменена
-                    return 0
-                fi
-            fi
-        done
-        # Если ключ найден, продолжаем настройку SSH
-        sed -i -e "
-            s/#PermitRootLogin/PermitRootLogin/g;
-            s/PermitRootLogin yes/PermitRootLogin prohibit-password/g;
-            s/#PubkeyAuthentication/PubkeyAuthentication/g;
-            s/PubkeyAuthentication no/PubkeyAuthentication yes/g;
-            s/#PasswordAuthentication/PasswordAuthentication/g;
-            s/PasswordAuthentication yes/PasswordAuthentication no/g;
-            s/#PermitEmptyPasswords/PermitEmptyPasswords/g;
-            s/PermitEmptyPasswords yes/PermitEmptyPasswords no/g;
-        " /etc/ssh/sshd_config
-
-        # Настройка баннера
-        cat > /etc/motd <<EOF
-
-################################################################################
-                         WARNING: AUTHORIZED ACCESS ONLY
-################################################################################
-
-This system is for the use of authorized users only. Individuals using this
-computer system without authority, or in excess of their authority, are subject
-to having all of their activities on this system monitored and recorded.
-
-Any unauthorized access or use of this system is prohibited and may be subject
-to criminal and/or civil penalties. All activities on this system are logged
-and monitored. By accessing this system, you agree to comply with all applicable
-company policies, and you consent to the monitoring and recording of your
-activities.
-
-If you are not an authorized user, you must disconnect immediately.
-
-Unauthorized access to this device is strictly prohibited and will be prosecuted
-to the fullest extent of the law.
-
-################################################################################
-
-             +----------------------------------------------------+
-             | █████ █████ ███████████     █████████   █████ █████|
-             |░░███ ░░███ ░░███░░░░░███   ███░░░░░███ ░░███ ░░███ |
-             | ░░███ ███   ░███    ░███  ░███    ░███  ░░███ ███  |
-             |  ░░█████    ░██████████   ░███████████   ░░█████   |
-             |   ███░███   ░███░░░░░███  ░███░░░░░███    ░░███    |
-             |  ███ ░░███  ░███    ░███  ░███    ░███     ░███    |
-             | █████ █████ █████   █████ █████   █████    █████   |
-             |░░░░░ ░░░░░ ░░░░░   ░░░░░ ░░░░░   ░░░░░    ░░░░░    |
-             +----------------------------------------------------+
-
-
-EOF
-        systemctl restart ssh.service
-    else
-        warning " $(text 9) "
-        return 0
-    fi
 }
 
 ### Окончание ###
@@ -1243,7 +1121,6 @@ main_script_first() {
     nginx_setup
     panel_installation
     enabling_security
-    ssh_setup
     data_output
     banner_1
     log_clear

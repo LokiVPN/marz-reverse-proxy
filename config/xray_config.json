@@ -187,6 +187,16 @@
         "refresh": 5,
         "concurrency": 3
       }
+    },
+    {
+      "tag": "Shadowsocks",
+      "listen": "0.0.0.0",
+      "port": 1080,
+      "protocol": "shadowsocks",
+      "settings": {
+        "clients": [],
+        "network": "tcp,udp"
+      }
     }
   ],
   "outbounds": [

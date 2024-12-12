@@ -6,14 +6,8 @@
   "PANEL_PASSWORD": "",
   "GENERAL_LIMIT": 3,
   "CHECK_INTERVAL": 240,
-  "TIME_TO_ACTIVE_USERS": 120,
+  "TIME_TO_ACTIVE_USERS": 500,
   "IP_LOCATION": "RU",
-  "EXCEPT_USERS": [
-    "user"
-  ],
-  "SPECIAL_LIMIT": {
-    "user0": 2,
-    "user1": 2,
-    "user2": 2
-  }
+  "EXCEPT_USERS": [],
+  "SPECIAL_LIMIT": {}
 }
