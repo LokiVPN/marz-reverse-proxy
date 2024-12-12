@@ -58,12 +58,12 @@ This script is designed to quickly and easily set up a hidden proxy server, with
 
 To begin configuring the server, simply run the following command in a terminal:
 ```sh
-bash <(curl -Ls https://github.com/cortez24rus/marz-reverse-proxy/raw/refs/heads/main/marz-rp-install-server.sh)
+bash <(curl -Ls https://github.com/LokiVPN/marz-reverse-proxy/raw/refs/heads/main/marz-rp-install-server.sh)
 ```
 
 ### Selecting and installing a random template for the website:
 ```sh
-bash <(curl -Ls https://github.com/cortez24rus/marz-reverse-proxy/raw/refs/heads/main/marz-rp-random-site.sh)
+bash <(curl -Ls https://github.com/LokiVPN/marz-reverse-proxy/raw/refs/heads/main/marz-rp-random-site.sh)
 ```
 
 The script will then prompt you for the necessary configuration information:
@@ -75,10 +75,3 @@ The script will then prompt you for the necessary configuration information:
 - All configurations can be modified as needed due to the flexibility of the settings.
 
 -----
-
-### If this script was useful for you, give it a star ⭐
-
------
-
-## Stargazers over time
-[![Stargazers over time](https://starchart.cc/cortez24rus/marz-reverse-proxy.svg?variant=adaptive)](https://starchart.cc/cortez24rus/marz-reverse-proxy)
